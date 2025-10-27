@@ -12,10 +12,12 @@
         nav button.active { background-color: #555; }
         main { padding: 15px; }
         .date-selector { text-align: center; padding: 10px; background-color: #e9e9e9; }
-        .menu-item, .order-item, .history-item, .price-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #ddd; }
+        .menu-item, .order-item, .history-item, .price-item, .expense-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #ddd; }
         .order-summary, .data-summary { margin-top: 20px; padding: 15px; background-color: #f9f9f9; border-radius: 8px; }
-        #confirm-order-btn { width: 100%; padding: 15px; font-size: 18px; background-color: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        .full-width-btn { width: 100%; padding: 15px; font-size: 18px; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        #confirm-order-btn { background-color: #4CAF50; }
         #confirm-order-btn:disabled { background-color: #a5d6a7; cursor: not-allowed; }
+        #add-expense-btn { background-color: #2196F3; margin-bottom: 15px; }
         .screen { display: none; }
         .screen.active { display: block; }
     </style>
@@ -39,13 +41,14 @@
                 <div id="current-order-list"><p>商品はまだ追加されていません。</p></div>
                 <hr>
                 <p><strong>合計金額: <span id="total-price">0</span> 円</strong></p>
-                <button id="confirm-order-btn">注文を確定する</button>
+                <button id="confirm-order-btn" class="full-width-btn">注文を確定する</button>
             </div>
         </section>
 
         <section id="expense-screen" class="screen">
             <h2>支出</h2>
-            <p>（この画面は現在開発中です）</p>
+            <button id="add-expense-btn" class="full-width-btn">支出を追加</button>
+            <div id="expense-list"></div>
         </section>
 
         <section id="data-screen" class="screen">
@@ -103,6 +106,8 @@
         const passwordGateDiv = document.getElementById('password-gate');
         const priceListContainerDiv = document.getElementById('price-list-container');
         const priceListDiv = document.getElementById('price-list');
+        const addExpenseBtn = document.getElementById('add-expense-btn');
+        const expenseListDiv = document.getElementById('expense-list');
 
         // --- App State ---
         let currentOrder = [];
@@ -120,6 +125,7 @@
             tab.addEventListener('click', () => switchScreen(tab.dataset.screen));
         });
         authBtn.addEventListener('click', verifyPassword);
+        addExpenseBtn.addEventListener('click', recordExpense);
 
         // --- Main Functions ---
         function switchScreen(targetScreenId) {
@@ -131,6 +137,7 @@
 
             if (targetScreenId === 'data-screen') renderDataScreen();
             if (targetScreenId === 'price-screen') renderPriceScreen();
+            if (targetScreenId === 'expense-screen') renderExpenseScreen();
         }
         
         async function fetchDataForDate() {
@@ -138,7 +145,7 @@
             document.getElementById('menu-list').innerHTML = '<p>データを読み込み中...</p>';
             currentOrder = [];
             renderCurrentOrder(); 
-            isAuthenticated = false; // 日付が変わったら認証もリセット
+            isAuthenticated = false;
 
             try {
                 const response = await fetch(GAS_URL, {
@@ -150,6 +157,11 @@
                 if (result.status === 'success') {
                     fullData = result.data;
                     renderMenu(fullData.menu);
+                    // If the currently active screen is a data-driven one, refresh it
+                    const activeScreen = document.querySelector('.screen.active').id;
+                    if(activeScreen === 'data-screen') renderDataScreen();
+                    if(activeScreen === 'expense-screen') renderExpenseScreen();
+
                 } else { throw new Error(result.message); }
             } catch (error) {
                 console.error('データの取得に失敗しました:', error);
@@ -179,6 +191,37 @@
             } finally {
                 confirmOrderBtn.disabled = false;
                 confirmOrderBtn.textContent = '注文を確定する';
+            }
+        }
+        
+        async function recordExpense() {
+            const name = prompt("品名を入力してください:");
+            if (!name) return;
+
+            const amount = prompt("金額を数字で入力してください:");
+            if (!amount || isNaN(amount)) {
+                alert("有効な数字を入力してください。");
+                return;
+            }
+
+            try {
+                const response = await fetch(GAS_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({
+                        action: 'recordExpense',
+                        payload: { date: dateSelect.value, name: name, amount: Number(amount) }
+                    })
+                });
+                const result = await response.json();
+                if (result.status === 'success') {
+                    alert('支出を記録しました。');
+                    await fetchDataForDate(); // Re-fetch data to update expense list
+                } else {
+                    throw new Error(result.message);
+                }
+            } catch (error) {
+                alert('支出の記録中にエラーが発生しました。');
             }
         }
 
@@ -256,19 +299,37 @@
 
         function renderDataScreen() {
             const salesHistory = fullData.sales || [];
+            const expenses = fullData.expenses || [];
             const totalSales = salesHistory.reduce((sum, item) => sum + Number(item.subtotal), 0);
             const totalItems = salesHistory.reduce((sum, item) => sum + Number(item.quantity), 0);
             summaryTotalSalesSpan.textContent = totalSales;
             summaryTotalItemsSpan.textContent = totalItems;
 
             orderHistoryListDiv.innerHTML = '';
-            if (salesHistory.length === 0) { orderHistoryListDiv.innerHTML = '<p>この日の売上履歴はまだありません。</p>'; return; }
-            [...salesHistory].reverse().forEach(item => {
-                const historyElement = document.createElement('div');
-                historyElement.className = 'history-item';
-                const time = new Date(item.timestamp).toLocaleTimeString('ja-JP');
-                historyElement.innerHTML = `<span>[${time}] ${item.name} x ${item.quantity}</span><span>${item.subtotal}円</span>`;
-                orderHistoryListDiv.appendChild(historyElement);
+            if (salesHistory.length === 0) { orderHistoryListDiv.innerHTML = '<p>この日の売上履歴はまだありません。</p>'; }
+            else {
+                [...salesHistory].reverse().forEach(item => {
+                    const historyElement = document.createElement('div');
+                    historyElement.className = 'history-item';
+                    const time = new Date(item.timestamp).toLocaleTimeString('ja-JP');
+                    historyElement.innerHTML = `<span>[${time}] ${item.name} x ${item.quantity}</span><span>${item.subtotal}円</span>`;
+                    orderHistoryListDiv.appendChild(historyElement);
+                });
+            }
+        }
+        
+        function renderExpenseScreen() {
+            expenseListDiv.innerHTML = '';
+            const expenses = fullData.expenses || [];
+            if (expenses.length === 0) {
+                expenseListDiv.innerHTML = '<p>この日の支出はまだありません。</p>';
+                return;
+            }
+            expenses.forEach(item => {
+                const expenseEl = document.createElement('div');
+                expenseEl.className = 'expense-item';
+                expenseEl.innerHTML = `<span>${item.name}</span><span>${item.amount}円</span>`;
+                expenseListDiv.appendChild(expenseEl);
             });
         }
 
