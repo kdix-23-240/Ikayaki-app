@@ -5,110 +5,218 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>イカ焼き会計アプリ</title>
     <style>
-        body { font-family: sans-serif; margin: 0; }
-        header, footer { background-color: #f2f2f2; padding: 15px; text-align: center; }
-        nav { display: flex; justify-content: space-around; background-color: #333; }
-        nav button { background: none; border: none; color: white; padding: 15px; font-size: 16px; cursor: pointer; width: 100%;}
-        nav button.active { background-color: #555; }
-        main { padding: 15px; }
-        .date-selector { text-align: center; padding: 10px; background-color: #e9e9e9; }
-        .menu-item, .order-item, .history-item, .price-item, .expense-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #ddd; }
-        .order-summary, .data-summary { margin-top: 20px; padding: 15px; background-color: #f9f9f9; border-radius: 8px; }
-        .full-width-btn { width: 100%; padding: 15px; font-size: 18px; color: white; border: none; border-radius: 5px; cursor: pointer; }
-        #confirm-order-btn { background-color: #4CAF50; }
-        #confirm-order-btn:disabled { background-color: #a5d6a7; cursor: not-allowed; }
-        #add-expense-btn { background-color: #2196F3; margin-bottom: 15px; }
+        /* --- Global Styles --- */
+        :root {
+            --pink: #E8B4B8;
+            --purple: #A09ABC;
+            --green: #B4E8C8;
+            --yellow: #E8E2B4;
+            --dark-gray: #333;
+            --medium-gray: #777;
+            --light-gray: #f4f4f8;
+            --white: #fff;
+            --border-color: #e0e0e0;
+            --border-radius: 12px;
+            --shadow: 0 4px 15px rgba(0,0,0,0.08);
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: var(--light-gray);
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        button, input, select { font-family: inherit; font-size: 16px; }
+        button { cursor: pointer; border: none; }
+        input[type="text"], input[type="number"], input[type="password"] {
+            border: 1px solid var(--border-color);
+            padding: 10px;
+            border-radius: 8px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        /* --- App Container --- */
+        #app-container {
+            width: 100%;
+            max-width: 400px;
+            background-color: var(--white);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+
+        /* --- Header & Navigation --- */
+        header { padding: 15px; border-bottom: 1px solid var(--border-color); }
+        #date-select { width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; background-color: #f9f9f9; }
+        nav { display: flex; }
+        .nav-tab {
+            flex: 1;
+            padding: 14px 0;
+            font-size: 16px;
+            background-color: #f8f8f8;
+            color: var(--medium-gray);
+            border: none;
+            border-bottom: 4px solid transparent;
+            transition: all 0.2s ease;
+            font-weight: 500;
+        }
+        .nav-tab.active { color: var(--dark-gray); font-weight: 700; }
+
+        /* --- Main Content --- */
+        main { padding: 20px; }
         .screen { display: none; }
-        .screen.active { display: block; }
+        .screen.active { display: block; animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .screen-header {
+            padding: 10px;
+            margin: -20px -20px 20px -20px;
+            color: var(--dark-gray);
+            text-align: center;
+        }
+        .screen-header h2 { margin: 0; font-size: 20px; }
+
+        /* Screen Specific Header Colors */
+        #order-screen .screen-header { background-color: var(--pink); }
+        #expense-screen .screen-header { background-color: var(--green); }
+        #data-screen .screen-header { background-color: var(--yellow); }
+        #price-screen .screen-header { background-color: var(--purple); }
+
+        /* --- Item Lists --- */
+        .list-container { border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; }
+        .list-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 15px;
+            background-color: var(--white);
+            border-bottom: 1px solid var(--border-color);
+        }
+        .list-item:last-child { border-bottom: none; }
+        .list-item-name { flex-grow: 1; font-weight: 500; }
+        .list-item-price { color: var(--medium-gray); margin-left: 10px; font-size: 14px; }
+        .list-item-actions { display: flex; align-items: center; gap: 8px; }
+
+        /* Quantity Selector */
+        .quantity-selector { display: flex; align-items: center; }
+        .quantity-btn { width: 30px; height: 30px; border-radius: 50%; background-color: #eee; color: var(--dark-gray); font-size: 20px; line-height: 28px; text-align: center; }
+        .quantity-display { width: 30px; text-align: center; font-size: 16px; font-weight: 600; }
+        .add-btn { background-color: var(--pink); color: white; width: 35px; height: 35px; border-radius: 50%; font-size: 22px; }
+        .delete-btn { width: 30px; height: 30px; border-radius: 50%; background-color: #fee; color: #e53e3e; font-weight: bold; }
+
+        /* --- Summaries & Actions --- */
+        .summary-box { margin-top: 20px; padding: 15px; background-color: #f9f9f9; border-radius: var(--border-radius); }
+        .summary-box p { display: flex; justify-content: space-between; margin: 10px 0; font-size: 18px; }
+        .main-action-btn { width: 100%; padding: 15px; margin-top: 15px; border-radius: 8px; font-size: 18px; font-weight: bold; color: var(--white); transition: background-color 0.2s; }
+        .main-action-btn:disabled { background-color: #ccc; cursor: not-allowed; }
+        
+        /* --- Expense & Price Screen Specific --- */
+        .inline-form { padding: 15px; background-color: #fdfdfd; border-bottom: 1px solid var(--border-color); }
+        .inline-form .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+        .inline-form .form-actions { display: flex; gap: 10px; }
+        .inline-form button { flex-grow: 1; padding: 10px; border-radius: 8px; }
+        .save-btn, .apply-btn { background-color: var(--green); color: var(--white); }
+        .cancel-btn { background-color: #eee; }
+
     </style>
 </head>
 <body>
 
-    <header class="date-selector">
-        <select id="date-select">
-            <option value="2025/10/28">0日目 (2025/10/28)</option>
-            <option value="2025/11/03">1日目 (2025/11/03)</option>
-            <option value="2025/11/04">2日目 (2025/11/04)</option>
-            <option value="2025/11/05">3日目 (2025/11/05)</option>
-        </select>
-    </header>
+    <div id="app-container">
+        <header>
+            <select id="date-select">
+                <option value="2025/10/28">0日目 (2025/10/28)</option>
+                <option value="2025/11/03">1日目 (2025/11/03)</option>
+                <option value="2025/11/04">2日目 (2025/11/04)</option>
+                <option value="2025/11/05">3日目 (2025/11/05)</option>
+            </select>
+        </header>
 
-    <main id="app-content">
-        <section id="order-screen" class="screen active">
-            <h2>注文</h2>
-            <div id="menu-list"><p>メニューを読み込み中...</p></div>
-            <div class="order-summary">
-                <h3>現在の注文</h3>
-                <div id="current-order-list"><p>商品はまだ追加されていません。</p></div>
-                <hr>
-                <p><strong>合計金額: <span id="total-price">0</span> 円</strong></p>
-                <button id="confirm-order-btn" class="full-width-btn">注文を確定する</button>
-            </div>
-        </section>
-
-        <section id="expense-screen" class="screen">
-            <h2>支出</h2>
-            <button id="add-expense-btn" class="full-width-btn">支出を追加</button>
-            <div id="expense-list"></div>
-        </section>
-
-        <section id="data-screen" class="screen">
-            <h2>データ</h2>
-            <div class="data-summary">
-                <h3>売上概要</h3>
-                <p><strong>総売上: <span id="summary-total-sales">0</span> 円</strong></p>
-                <p><strong>販売総数: <span id="summary-total-items">0</span> 個</strong></p>
-            </div>
-            <h3>注文履歴</h3>
-            <div id="order-history-list">
-                <p>履歴を読み込んでいます...</p>
-            </div>
-        </section>
-
-        <section id="price-screen" class="screen">
-            <h2>価格設定</h2>
-            <form id="password-gate" onsubmit="return false;">
-                <p>この画面を操作するにはパスワードが必要です。</p>
-                <input type="password" id="password-input" placeholder="パスワードを入力" style="width: 80%; padding: 10px;">
-                <button id="auth-btn" type="submit" style="padding: 10px;">認証</button>
-            </form>
-            <div id="price-list-container" style="display: none;">
-                <p>商品の価格を変更できます。</p>
-                <div id="price-list"></div>
-            </div>
-        </section>
-    </main>
-
-    <footer>
         <nav>
-            <button class="nav-tab active" data-screen="order-screen">注文</button>
-            <button class="nav-tab" data-screen="expense-screen">支出</button>
-            <button class="nav-tab" data-screen="data-screen">データ</button>
-            <button class="nav-tab" data-screen="price-screen">価格</button>
+            <button class="nav-tab active" data-screen="order-screen" data-color="var(--pink)">注文</button>
+            <button class="nav-tab" data-screen="expense-screen" data-color="var(--green)">支出</button>
+            <button class="nav-tab" data-screen="data-screen" data-color="var(--yellow)">データ</button>
+            <button class="nav-tab" data-screen="price-screen" data-color="var(--purple)">価格</button>
         </nav>
-    </footer>
+
+        <main id="app-content">
+            <section id="order-screen" class="screen active">
+                <div class="screen-header"><h2>注文</h2></div>
+                <div class="list-container" id="menu-list"><p class="placeholder">メニューを読み込み中...</p></div>
+                <div class="summary-box">
+                    <div id="current-order-list"><p class="placeholder">商品はまだ追加されていません。</p></div>
+                    <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 15px 0;">
+                    <p><strong>合計金額:</strong><strong><span id="total-price">0</span> 円</strong></p>
+                </div>
+                <button id="confirm-order-btn" class="main-action-btn" style="background-color: var(--pink);">決定</button>
+            </section>
+
+            <section id="expense-screen" class="screen">
+                <div class="screen-header"><h2>支出</h2></div>
+                <button id="add-expense-btn" class="main-action-btn" style="background-color: var(--green); margin-bottom: 15px;">支出を追加</button>
+                <div class="list-container" id="expense-list"></div>
+            </section>
+
+            <section id="data-screen" class="screen">
+                <div class="screen-header"><h2>データ</h2></div>
+                <div class="summary-box">
+                    <p><strong>総売上:</strong><span id="summary-total-sales">0</span> 円</p>
+                    <p><strong>総支出:</strong><span id="summary-total-expenses">0</span> 円</p>
+                    <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 15px 0;">
+                    <p><strong>純利益:</strong><strong><span id="summary-net-profit">0</span> 円</strong></p>
+                    <p><strong>販売総数:</strong><span id="summary-total-items">0</span> 個</p>
+                </div>
+                <h3 style="text-align: center; margin-top: 25px; color: var(--dark-gray);">注文履歴</h3>
+                <div class="list-container" id="order-history-list"></div>
+            </section>
+
+            <section id="price-screen" class="screen">
+                <div class="screen-header"><h2>価格</h2></div>
+                <div id="password-gate">
+                    <p style="text-align:center; color: var(--medium-gray);">この画面の操作にはパスワードが必要です。</p>
+                    <form onsubmit="event.preventDefault(); verifyPassword();">
+                        <input type="password" id="password-input" placeholder="パスワードを入力">
+                        <button id="auth-btn" type="submit" class="main-action-btn" style="background-color: var(--purple);">認証</button>
+                    </form>
+                </div>
+                <div id="price-list-container" style="display: none;">
+                    <p style="text-align:center; color: var(--medium-gray); margin-bottom: 15px;">商品の価格を変更できます。</p>
+                    <div class="list-container" id="price-list"></div>
+                </div>
+            </section>
+        </main>
+    </div>
 
     <script>
         const GAS_URL = 'https://script.google.com/macros/s/AKfycbxdpT6hVAl5F7jMcwqmuwinR6v9H4hVvfHz7P87LwJOnkaFiqowhKI9zYTK04tImN_J/exec';
 
         // --- DOM Elements ---
         const dateSelect = document.getElementById('date-select');
+        const navTabs = document.querySelectorAll('.nav-tab');
+        const screens = document.querySelectorAll('.screen');
+        // Order Screen
         const menuListDiv = document.getElementById('menu-list');
         const currentOrderListDiv = document.getElementById('current-order-list');
         const totalPriceSpan = document.getElementById('total-price');
         const confirmOrderBtn = document.getElementById('confirm-order-btn');
-        const navTabs = document.querySelectorAll('.nav-tab');
-        const screens = document.querySelectorAll('.screen');
+        // Expense Screen
+        const addExpenseBtn = document.getElementById('add-expense-btn');
+        const expenseListDiv = document.getElementById('expense-list');
+        // Data Screen
         const summaryTotalSalesSpan = document.getElementById('summary-total-sales');
+        const summaryTotalExpensesSpan = document.getElementById('summary-total-expenses');
+        const summaryNetProfitSpan = document.getElementById('summary-net-profit');
         const summaryTotalItemsSpan = document.getElementById('summary-total-items');
         const orderHistoryListDiv = document.getElementById('order-history-list');
+        // Price Screen
         const passwordInput = document.getElementById('password-input');
         const authBtn = document.getElementById('auth-btn');
         const passwordGateDiv = document.getElementById('password-gate');
         const priceListContainerDiv = document.getElementById('price-list-container');
         const priceListDiv = document.getElementById('price-list');
-        const addExpenseBtn = document.getElementById('add-expense-btn');
-        const expenseListDiv = document.getElementById('expense-list');
 
         // --- App State ---
         let currentOrder = [];
@@ -116,60 +224,83 @@
         let isAuthenticated = false;
 
         // --- Event Listeners ---
-        document.addEventListener('DOMContentLoaded', fetchDataForDate);
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelector('.nav-tab.active').style.borderBottomColor = document.querySelector('.nav-tab.active').dataset.color;
+            fetchDataForDate();
+        });
         dateSelect.addEventListener('change', fetchDataForDate);
         confirmOrderBtn.addEventListener('click', () => {
             if (currentOrder.length > 0) recordSale();
             else alert('商品が追加されていません。');
         });
         navTabs.forEach(tab => {
-            tab.addEventListener('click', () => switchScreen(tab.dataset.screen));
+            tab.addEventListener('click', () => switchScreen(tab));
         });
-        authBtn.addEventListener('click', verifyPassword);
-        addExpenseBtn.addEventListener('click', recordExpense);
+        addExpenseBtn.addEventListener('click', showExpenseInputRow);
 
         // --- Main Functions ---
-        function switchScreen(targetScreenId) {
-            navTabs.forEach(t => t.classList.remove('active'));
-            document.querySelector(`[data-screen="${targetScreenId}"]`).classList.add('active');
+        function switchScreen(clickedTab) {
+            const targetScreenId = clickedTab.dataset.screen;
+            
+            navTabs.forEach(t => {
+                t.classList.remove('active');
+                t.style.borderBottomColor = 'transparent';
+            });
+            clickedTab.classList.add('active');
+            clickedTab.style.borderBottomColor = clickedTab.dataset.color;
             
             screens.forEach(s => s.classList.remove('active'));
             document.getElementById(targetScreenId).classList.add('active');
 
+            // 画面切り替え時に最新データを描画
             if (targetScreenId === 'data-screen') renderDataScreen();
             if (targetScreenId === 'price-screen') renderPriceScreen();
             if (targetScreenId === 'expense-screen') renderExpenseScreen();
         }
         
         async function fetchDataForDate() {
-            const selectedDate = dateSelect.value;
-            document.getElementById('menu-list').innerHTML = '<p>データを読み込み中...</p>';
+            setLoadingState(true);
             currentOrder = [];
-            renderCurrentOrder(); 
-            isAuthenticated = false;
+            renderCurrentOrder();
+            isAuthenticated = false; // 日付変更で認証リセット
 
             try {
                 const response = await fetch(GAS_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify({ action: 'getDataForDate', payload: { date: selectedDate } })
+                    body: JSON.stringify({ action: 'getDataForDate', payload: { date: dateSelect.value } })
                 });
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                 const result = await response.json();
+
                 if (result.status === 'success') {
                     fullData = result.data;
                     renderMenu(fullData.menu);
                     
+                    // 現在アクティブな画面を再描画
                     const activeScreenId = document.querySelector('.screen.active').id;
-                    if(activeScreenId === 'data-screen') renderDataScreen();
-                    if(activeScreenId === 'expense-screen') renderExpenseScreen();
-
-                } else { throw new Error(result.message); }
+                    if (activeScreenId === 'data-screen') renderDataScreen();
+                    if (activeScreenId === 'expense-screen') renderExpenseScreen();
+                    if (activeScreenId === 'price-screen') renderPriceScreen();
+                } else {
+                    throw new Error(result.message);
+                }
             } catch (error) {
                 console.error('データの取得に失敗しました:', error);
-                document.getElementById('menu-list').innerHTML = `<p style="color: red;">エラー: データの取得に失敗しました。</p>`;
+                menuListDiv.innerHTML = `<p class="placeholder" style="color: red;">エラー: データの取得に失敗しました。</p>`;
+            } finally {
+                setLoadingState(false);
             }
         }
         
+        function setLoadingState(isLoading) {
+            const elements = [confirmOrderBtn, addExpenseBtn, authBtn];
+            elements.forEach(el => el.disabled = isLoading);
+            if(isLoading) {
+                menuListDiv.innerHTML = `<p class="placeholder">データを読み込み中...</p>`;
+            }
+        }
+
         async function recordSale() {
             confirmOrderBtn.disabled = true;
             confirmOrderBtn.textContent = '送信中...';
@@ -184,94 +315,56 @@
                     alert('注文を記録しました！');
                     currentOrder = [];
                     renderCurrentOrder();
-                    await fetchDataForDate();
+                    await fetchDataForDate(); // 最新データに更新
                 } else { throw new Error(result.message); }
             } catch (error) {
                 console.error('注文の記録に失敗しました:', error);
                 alert(`エラー: 注文の記録に失敗しました。\n${error.message}`);
             } finally {
                 confirmOrderBtn.disabled = false;
-                confirmOrderBtn.textContent = '注文を確定する';
+                confirmOrderBtn.textContent = '決定';
             }
         }
         
-        async function recordExpense() {
-            const name = prompt("品名を入力してください:");
-            if (!name) return;
-
-            const amount = prompt("金額を数字で入力してください:");
-            if (!amount || isNaN(amount)) {
-                alert("有効な数字を入力してください。");
-                return;
-            }
-
-            try {
-                const response = await fetch(GAS_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify({
-                        action: 'recordExpense',
-                        payload: { date: dateSelect.value, name: name, amount: Number(amount) }
-                    })
-                });
-                const result = await response.json();
-                if (result.status === 'success') {
-                    alert('支出を記録しました。');
-                    await fetchDataForDate();
-                } else { throw new Error(result.message); }
-            } catch (error) { alert('支出の記録中にエラーが発生しました。'); }
-        }
-
-        async function verifyPassword() {
-            const password = passwordInput.value;
-            if (!password) { alert('パスワードを入力してください。'); return; }
-            try {
-                const response = await fetch(GAS_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify({ action: 'verifyPassword', payload: { password: password } })
-                });
-                const result = await response.json();
-                if (result.status === 'success' && result.data.authenticated) {
-                    isAuthenticated = true;
-                    renderPriceScreen();
-                } else { alert('認証に失敗しました。'); }
-            } catch (error) { alert('エラーが発生しました。'); }
-        }
-
-        async function updatePrice(name, newPrice) {
-            try {
-                const response = await fetch(GAS_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify({ action: 'updatePrice', payload: { name: name, newPrice: newPrice } })
-                });
-                const result = await response.json();
-                if (result.status === 'success') {
-                    alert('価格を更新しました！');
-                    await fetchDataForDate();
-                    renderPriceScreen();
-                } else { throw new Error(result.message); }
-            } catch (error) { alert('価格の更新中にエラーが発生しました。'); }
-        }
-
         // --- Rendering Functions ---
         function renderMenu(menuItems) {
             menuListDiv.innerHTML = '';
-            if(!menuItems || menuItems.length === 0) { menuListDiv.innerHTML = '<p>表示できるメニューがありません。</p>'; return; }
+            if(!menuItems || menuItems.length === 0) {
+                menuListDiv.innerHTML = '<p class="placeholder">表示できるメニューがありません。</p>';
+                return;
+            }
             menuItems.forEach(item => {
                 const el = document.createElement('div');
-                el.className = 'menu-item';
-                el.innerHTML = `<span>${item.name} (${item.price}円)</span><button>追加</button>`;
-                el.querySelector('button').addEventListener('click', () => addToOrder(item));
+                el.className = 'list-item';
+                el.innerHTML = `
+                    <div class="list-item-name">${item.name}<span class="list-item-price">${item.price}円</span></div>
+                    <div class="list-item-actions">
+                        <button class="add-btn">+</button>
+                    </div>
+                `;
+                el.querySelector('.add-btn').addEventListener('click', () => addToOrder(item));
                 menuListDiv.appendChild(el);
             });
         }
 
         function addToOrder(itemToAdd) {
             const existingItem = currentOrder.find(item => item.name === itemToAdd.name);
-            if (existingItem) existingItem.quantity++;
-            else currentOrder.push({ name: itemToAdd.name, price: itemToAdd.price, quantity: 1 });
+            if (existingItem) {
+                existingItem.quantity++;
+            } else {
+                currentOrder.push({ name: itemToAdd.name, price: itemToAdd.price, quantity: 1 });
+            }
+            renderCurrentOrder();
+        }
+        
+        function changeQuantity(name, change) {
+            const item = currentOrder.find(i => i.name === name);
+            if (item) {
+                item.quantity += change;
+                if (item.quantity <= 0) {
+                    currentOrder = currentOrder.filter(i => i.name !== name);
+                }
+            }
             renderCurrentOrder();
         }
 
@@ -279,12 +372,25 @@
             currentOrderListDiv.innerHTML = '';
             let totalPrice = 0;
             if (currentOrder.length === 0) {
-                currentOrderListDiv.innerHTML = '<p>商品はまだ追加されていません。</p>';
+                currentOrderListDiv.innerHTML = '<p class="placeholder">商品はまだ追加されていません。</p>';
             } else {
                 currentOrder.forEach(item => {
                     const el = document.createElement('div');
-                    el.className = 'order-item';
-                    el.innerHTML = `<span>${item.name} x ${item.quantity}</span><span>${item.price * item.quantity}円</span>`;
+                    el.className = 'list-item';
+                    el.innerHTML = `
+                        <div class="list-item-name">${item.name}</div>
+                        <div class="list-item-actions">
+                            <div class="quantity-selector">
+                                <button class="quantity-btn minus-btn">-</button>
+                                <span class="quantity-display">${item.quantity}</span>
+                                <button class="quantity-btn plus-btn">+</button>
+                            </div>
+                            <button class="delete-btn">×</button>
+                        </div>
+                    `;
+                    el.querySelector('.minus-btn').addEventListener('click', () => changeQuantity(item.name, -1));
+                    el.querySelector('.plus-btn').addEventListener('click', () => changeQuantity(item.name, 1));
+                    el.querySelector('.delete-btn').addEventListener('click', () => changeQuantity(item.name, -Infinity));
                     currentOrderListDiv.appendChild(el);
                     totalPrice += item.price * item.quantity;
                 });
@@ -292,69 +398,223 @@
             totalPriceSpan.textContent = totalPrice;
         }
 
-        /**
-         * ★★★ 修正ポイント ★★★
-         * サーバーから送られてきたサマリーを表示するように変更
-         */
         function renderDataScreen() {
             const summary = fullData.summary || { totalSales: 0, totalItems: 0 };
             const salesHistory = fullData.sales || [];
-            
-            // サーバーで計算済みの値を表示するだけ
-            summaryTotalSalesSpan.textContent = summary.totalSales;
-            summaryTotalItemsSpan.textContent = summary.totalItems;
+            const expenses = fullData.expenses || [];
 
+            const totalExpenses = expenses.reduce((sum, item) => sum + item.amount, 0);
+            const netProfit = summary.totalSales - totalExpenses;
+
+            summaryTotalSalesSpan.textContent = summary.totalSales;
+            summaryTotalExpensesSpan.textContent = totalExpenses;
+            summaryNetProfitSpan.textContent = netProfit;
+            summaryTotalItemsSpan.textContent = summary.totalItems;
+            
             orderHistoryListDiv.innerHTML = '';
-            if (salesHistory.length === 0) { orderHistoryListDiv.innerHTML = '<p>この日の売上履歴はまだありません。</p>'; }
-            else {
+            if (salesHistory.length === 0) {
+                orderHistoryListDiv.innerHTML = '<p class="placeholder">この日の売上履歴はありません。</p>';
+            } else {
                 [...salesHistory].reverse().forEach(item => {
-                    const historyElement = document.createElement('div');
-                    historyElement.className = 'history-item';
-                    const time = new Date(item.timestamp).toLocaleTimeString('ja-JP');
-                    historyElement.innerHTML = `<span>[${time}] ${item.name} x ${item.quantity}</span><span>${item.subtotal}円</span>`;
-                    orderHistoryListDiv.appendChild(historyElement);
+                    const el = document.createElement('div');
+                    el.className = 'list-item';
+                    const time = new Date(item.timestamp).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+                    el.innerHTML = `
+                        <div class="list-item-name">${item.name} x ${item.quantity}
+                            <span class="list-item-price">${time}</span>
+                        </div>
+                        <strong>${item.subtotal}円</strong>`;
+                    orderHistoryListDiv.appendChild(el);
                 });
             }
         }
         
+        // --- NEW/MODIFIED Functions for Expense ---
+        function showExpenseInputRow() {
+            if (document.getElementById('new-expense-form')) return; // 既に入力フォームがあれば何もしない
+
+            const formEl = document.createElement('div');
+            formEl.id = 'new-expense-form';
+            formEl.className = 'inline-form';
+            formEl.innerHTML = `
+                <div class="form-grid">
+                    <input type="text" id="expense-name" placeholder="品名">
+                    <input type="number" id="expense-amount" placeholder="金額">
+                </div>
+                <div class="form-actions">
+                    <button id="save-expense-btn" class="save-btn">保存</button>
+                    <button id="cancel-expense-btn" class="cancel-btn">キャンセル</button>
+                </div>
+            `;
+            expenseListDiv.insertAdjacentElement('beforebegin', formEl);
+            addExpenseBtn.style.display = 'none'; // 追加ボタンを隠す
+
+            document.getElementById('save-expense-btn').onclick = async () => {
+                const name = document.getElementById('expense-name').value;
+                const amount = document.getElementById('expense-amount').value;
+                if (!name || !amount || isNaN(amount)) {
+                    alert('品名と有効な金額を入力してください。');
+                    return;
+                }
+                await recordExpense(name, Number(amount));
+                formEl.remove();
+                addExpenseBtn.style.display = 'block';
+            };
+
+            document.getElementById('cancel-expense-btn').onclick = () => {
+                formEl.remove();
+                addExpenseBtn.style.display = 'block';
+            };
+        }
+
+        async function recordExpense(name, amount) {
+            try {
+                const response = await fetch(GAS_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({ action: 'recordExpense', payload: { date: dateSelect.value, name, amount } })
+                });
+                const result = await response.json();
+                if (result.status === 'success') {
+                    alert('支出を記録しました。');
+                    await fetchDataForDate(); // データ再取得してUIを更新
+                } else { throw new Error(result.message); }
+            } catch (error) {
+                console.error('支出の記録に失敗:', error);
+                alert('支出の記録中にエラーが発生しました。');
+            }
+        }
+
         function renderExpenseScreen() {
             expenseListDiv.innerHTML = '';
+            // 既存の入力フォームがあれば削除
+            document.getElementById('new-expense-form')?.remove();
+            addExpenseBtn.style.display = 'block';
+
             const expenses = fullData.expenses || [];
             if (expenses.length === 0) {
-                expenseListDiv.innerHTML = '<p>この日の支出はまだありません。</p>';
+                expenseListDiv.innerHTML = '<p class="placeholder">この日の支出はありません。</p>';
                 return;
             }
             expenses.forEach(item => {
-                const expenseEl = document.createElement('div');
-                expenseEl.className = 'expense-item';
-                expenseEl.innerHTML = `<span>${item.name}</span><span>${item.amount}円</span>`;
-                expenseListDiv.appendChild(expenseEl);
+                const el = document.createElement('div');
+                el.className = 'list-item';
+                el.innerHTML = `<div class="list-item-name">${item.name}</div><strong>${item.amount}円</strong>`;
+                expenseListDiv.appendChild(el);
             });
+        }
+        
+        // --- NEW/MODIFIED Functions for Price ---
+        async function verifyPassword() {
+            const password = passwordInput.value;
+            if (!password) { alert('パスワードを入力してください。'); return; }
+            authBtn.disabled = true;
+            authBtn.textContent = '確認中...';
+            try {
+                const response = await fetch(GAS_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({ action: 'verifyPassword', payload: { password } })
+                });
+                const result = await response.json();
+                if (result.status === 'success' && result.data.authenticated) {
+                    isAuthenticated = true;
+                    renderPriceScreen();
+                } else {
+                    alert('認証に失敗しました。');
+                    passwordInput.value = '';
+                }
+            } catch (error) {
+                alert('エラーが発生しました。');
+            } finally {
+                authBtn.disabled = false;
+                authBtn.textContent = '認証';
+            }
         }
 
         function renderPriceScreen() {
             if (isAuthenticated) {
                 passwordGateDiv.style.display = 'none';
                 priceListContainerDiv.style.display = 'block';
-                
                 priceListDiv.innerHTML = '';
                 const menuItems = fullData.menu || [];
+
                 menuItems.forEach(item => {
-                    const priceItemEl = document.createElement('div');
-                    priceItemEl.className = 'price-item';
-                    priceItemEl.innerHTML = `<span>${item.name} (現在 ${item.price}円)</span><button>変更</button>`;
-                    priceItemEl.querySelector('button').addEventListener('click', () => {
-                        const newPrice = prompt(`${item.name}の新しい価格を入力してください（数字のみ）:`, item.price);
-                        if (newPrice && !isNaN(newPrice)) {
-                            updatePrice(item.name, Number(newPrice));
-                        }
-                    });
-                    priceListDiv.appendChild(priceItemEl);
+                    const el = document.createElement('div');
+                    el.className = 'list-item';
+                    el.dataset.itemName = item.name;
+                    el.innerHTML = `
+                        <div class="list-item-content">
+                            <div class="list-item-name">${item.name}<span class="list-item-price">現在 ${item.price}円</span></div>
+                        </div>
+                        <button class="change-price-btn" style="background-color: var(--yellow); padding: 8px 16px; border-radius: 8px;">変更</button>
+                    `;
+                    el.querySelector('.change-price-btn').addEventListener('click', () => showPriceInput(item.name, item.price));
+                    priceListDiv.appendChild(el);
                 });
             } else {
                 passwordGateDiv.style.display = 'block';
                 priceListContainerDiv.style.display = 'none';
                 passwordInput.value = '';
+            }
+        }
+
+        function showPriceInput(name, currentPrice) {
+            // 他の編集中項目があれば元に戻す
+            const otherEditing = document.querySelector('.inline-form[data-item-name]');
+            if(otherEditing) {
+                const oldName = otherEditing.dataset.itemName;
+                const oldPrice = fullData.menu.find(i => i.name === oldName).price;
+                cancelPriceEdit(oldName, oldPrice);
+            }
+
+            const itemEl = document.querySelector(`.list-item[data-item-name="${name}"]`);
+            itemEl.innerHTML = `
+                <div class="inline-form" style="width:100%; padding:0;" data-item-name="${name}">
+                    <input type="number" value="${currentPrice}" placeholder="新しい価格" id="new-price-${name}" style="margin-bottom: 10px;">
+                    <div class="form-actions">
+                        <button class="apply-btn">適用</button>
+                        <button class="cancel-btn">キャンセル</button>
+                    </div>
+                </div>`;
+            
+            itemEl.querySelector('.apply-btn').onclick = async () => {
+                const newPrice = document.getElementById(`new-price-${name}`).value;
+                if(newPrice && !isNaN(newPrice)) {
+                    await updatePrice(name, Number(newPrice));
+                } else {
+                    alert('有効な価格を入力してください。');
+                }
+            };
+            itemEl.querySelector('.cancel-btn').onclick = () => cancelPriceEdit(name, currentPrice);
+        }
+
+        function cancelPriceEdit(name, price) {
+            const itemEl = document.querySelector(`.list-item[data-item-name="${name}"]`);
+            itemEl.innerHTML = `
+                <div class="list-item-content">
+                    <div class="list-item-name">${name}<span class="list-item-price">現在 ${price}円</span></div>
+                </div>
+                <button class="change-price-btn" style="background-color: var(--yellow); padding: 8px 16px; border-radius: 8px;">変更</button>
+            `;
+            itemEl.querySelector('.change-price-btn').addEventListener('click', () => showPriceInput(name, price));
+        }
+        
+        async function updatePrice(name, newPrice) {
+            try {
+                const response = await fetch(GAS_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({ action: 'updatePrice', payload: { name, newPrice } })
+                });
+                const result = await response.json();
+                if (result.status === 'success') {
+                    alert('価格を更新しました！');
+                    await fetchDataForDate(); // データ再取得してUIを更新
+                } else { throw new Error(result.message); }
+            } catch (error) {
+                alert('価格の更新中にエラーが発生しました。');
+                await fetchDataForDate(); // エラーでもUIを元に戻すために再描画
             }
         }
     </script>
