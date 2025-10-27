@@ -26,6 +26,7 @@
 
     <header class="date-selector">
         <select id="date-select">
+            <option value="2025/10/28">0日目 (2025/10/28)</option>
             <option value="2025/11/03">1日目 (2025/11/03)</option>
             <option value="2025/11/04">2日目 (2025/11/04)</option>
             <option value="2025/11/05">3日目 (2025/11/05)</option>
@@ -66,11 +67,11 @@
 
         <section id="price-screen" class="screen">
             <h2>価格設定</h2>
-            <div id="password-gate">
+            <form id="password-gate" onsubmit="return false;">
                 <p>この画面を操作するにはパスワードが必要です。</p>
                 <input type="password" id="password-input" placeholder="パスワードを入力" style="width: 80%; padding: 10px;">
-                <button id="auth-btn" style="padding: 10px;">認証</button>
-            </div>
+                <button id="auth-btn" type="submit" style="padding: 10px;">認証</button>
+            </form>
             <div id="price-list-container" style="display: none;">
                 <p>商品の価格を変更できます。</p>
                 <div id="price-list"></div>
@@ -88,7 +89,7 @@
     </footer>
 
     <script>
-        const GAS_URL = 'https://script.google.com/macros/s/AKfycbyhtP3O1WGlGDGqOq327S7R8RuJu5D5nNWXDGLTpTwwSzTk5IpIznFboheCKajAmpjjHw/exec';
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbxdpT6hVAl5F7jMcwqmuwinR6v9H4hVvfHz7P87LwJOnkaFiqowhKI9zYTK04tImN_J/exec';
 
         // --- DOM Elements ---
         const dateSelect = document.getElementById('date-select');
@@ -157,10 +158,10 @@
                 if (result.status === 'success') {
                     fullData = result.data;
                     renderMenu(fullData.menu);
-                    // If the currently active screen is a data-driven one, refresh it
-                    const activeScreen = document.querySelector('.screen.active').id;
-                    if(activeScreen === 'data-screen') renderDataScreen();
-                    if(activeScreen === 'expense-screen') renderExpenseScreen();
+                    
+                    const activeScreenId = document.querySelector('.screen.active').id;
+                    if(activeScreenId === 'data-screen') renderDataScreen();
+                    if(activeScreenId === 'expense-screen') renderExpenseScreen();
 
                 } else { throw new Error(result.message); }
             } catch (error) {
@@ -183,7 +184,7 @@
                     alert('注文を記録しました！');
                     currentOrder = [];
                     renderCurrentOrder();
-                    fetchDataForDate();
+                    await fetchDataForDate();
                 } else { throw new Error(result.message); }
             } catch (error) {
                 console.error('注文の記録に失敗しました:', error);
@@ -216,13 +217,9 @@
                 const result = await response.json();
                 if (result.status === 'success') {
                     alert('支出を記録しました。');
-                    await fetchDataForDate(); // Re-fetch data to update expense list
-                } else {
-                    throw new Error(result.message);
-                }
-            } catch (error) {
-                alert('支出の記録中にエラーが発生しました。');
-            }
+                    await fetchDataForDate();
+                } else { throw new Error(result.message); }
+            } catch (error) { alert('支出の記録中にエラーが発生しました。'); }
         }
 
         async function verifyPassword() {
@@ -238,9 +235,7 @@
                 if (result.status === 'success' && result.data.authenticated) {
                     isAuthenticated = true;
                     renderPriceScreen();
-                } else {
-                    alert('認証に失敗しました。');
-                }
+                } else { alert('認証に失敗しました。'); }
             } catch (error) { alert('エラーが発生しました。'); }
         }
 
@@ -297,13 +292,17 @@
             totalPriceSpan.textContent = totalPrice;
         }
 
+        /**
+         * ★★★ 修正ポイント ★★★
+         * サーバーから送られてきたサマリーを表示するように変更
+         */
         function renderDataScreen() {
+            const summary = fullData.summary || { totalSales: 0, totalItems: 0 };
             const salesHistory = fullData.sales || [];
-            const expenses = fullData.expenses || [];
-            const totalSales = salesHistory.reduce((sum, item) => sum + Number(item.subtotal), 0);
-            const totalItems = salesHistory.reduce((sum, item) => sum + Number(item.quantity), 0);
-            summaryTotalSalesSpan.textContent = totalSales;
-            summaryTotalItemsSpan.textContent = totalItems;
+            
+            // サーバーで計算済みの値を表示するだけ
+            summaryTotalSalesSpan.textContent = summary.totalSales;
+            summaryTotalItemsSpan.textContent = summary.totalItems;
 
             orderHistoryListDiv.innerHTML = '';
             if (salesHistory.length === 0) { orderHistoryListDiv.innerHTML = '<p>この日の売上履歴はまだありません。</p>'; }

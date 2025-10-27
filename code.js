@@ -15,23 +15,12 @@ function doPost(e) {
     let result = {};
 
     switch (action) {
-      case 'recordSale':
-        result = recordSale(request.payload);
-        break;
-      case 'recordExpense':
-        result = recordExpense(request.payload);
-        break;
-      case 'verifyPassword':
-        result = verifyPassword(request.payload);
-        break;
-      case 'updatePrice':
-        result = updatePrice(request.payload);
-        break;
-      case 'getDataForDate':
-        result = getDataForDate(request.payload);
-        break;
-      default:
-        throw new Error('無効なアクションです。');
+      case 'recordSale': result = recordSale(request.payload); break;
+      case 'recordExpense': result = recordExpense(request.payload); break;
+      case 'verifyPassword': result = verifyPassword(request.payload); break;
+      case 'updatePrice': result = updatePrice(request.payload); break;
+      case 'getDataForDate': result = getDataForDate(request.payload); break;
+      default: throw new Error('無効なアクションです。');
     }
     return ContentService.createTextOutput(JSON.stringify({ status: 'success', data: result }))
       .setMimeType(ContentService.MimeType.JSON);
@@ -86,6 +75,10 @@ function updatePrice(payload) {
   throw new Error('該当する商品が見つかりません。');
 }
 
+/**
+ * ★★★ 修正ポイント ★★★
+ * 取得したデータからサマリー（合計値）を計算し、フロントエンドに渡すように変更
+ */
 function getDataForDate(payload) {
     const targetDate = payload.date;
 
@@ -96,9 +89,7 @@ function getDataForDate(payload) {
     if (salesSheet.getLastRow() > 1) {
         salesHistory = salesSheet.getDataRange().getValues().slice(1)
             .filter(row => {
-                // 日付セルが空でないことを確認
                 if (row[2]) {
-                    // スプレッドシートの日付を 'yyyy/MM/dd' 形式の文字列に変換して比較
                     const sheetDate = Utilities.formatDate(new Date(row[2]), "JST", "yyyy/MM/dd");
                     return sheetDate === targetDate;
                 }
@@ -106,15 +97,12 @@ function getDataForDate(payload) {
             })
             .map(row => ({ id: row[0], timestamp: row[1], name: row[3], quantity: row[4], price: row[5], subtotal: row[6] }));
     }
-
-    // ★★★ 修正ポイント ★★★
+    
     let expenseHistory = [];
     if (expenseSheet.getLastRow() > 1) {
         expenseHistory = expenseSheet.getDataRange().getValues().slice(1)
             .filter(row => {
-                // 日付セルが空でないことを確認
                 if (row[1]) {
-                    // スプレッドシートの日付を 'yyyy/MM/dd' 形式の文字列に変換して比較
                     const sheetDate = Utilities.formatDate(new Date(row[1]), "JST", "yyyy/MM/dd");
                     return sheetDate === targetDate;
                 }
@@ -122,6 +110,19 @@ function getDataForDate(payload) {
             })
             .map(row => ({ id: row[0], date: row[1], name: row[2], amount: row[3] }));
     }
-
-    return { menu: menuData, sales: salesHistory, expenses: expenseHistory };
+    
+    // サーバーサイドで合計値を計算
+    const totalSales = salesHistory.reduce((sum, item) => sum + Number(item.subtotal), 0);
+    const totalItems = salesHistory.reduce((sum, item) => sum + Number(item.quantity), 0);
+        
+    return { 
+        menu: menuData, 
+        sales: salesHistory, 
+        expenses: expenseHistory,
+        // 計算したサマリーをデータに追加して返す
+        summary: {
+            totalSales: totalSales,
+            totalItems: totalItems
+        }
+    };
 }
